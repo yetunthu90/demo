@@ -1,4 +1,4 @@
-name: Move Issues to In Progress
+name: Move Issue to In Progress
 
 on:
   issues:
@@ -7,33 +7,56 @@ on:
 jobs:
   move_issue:
     runs-on: ubuntu-latest
+    if: github.event.issue.pull_request == null
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v2
+      - name: Check if issue has required label and is assigned
+        id: check_issue
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const requiredLabel = 'In Progress'; // Replace with the exact label you want
+            const issueLabels = context.payload.issue.labels.map(label => label.name);
+            const isAssigned = context.payload.issue.assignee !== null;
+            const hasLabel = issueLabels.includes(requiredLabel);
+            return { moveIssue: isAssigned && hasLabel };
 
-      - name: Move issue to In Progress if labeled or assigned
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ISSUE_NUMBER=${{ github.event.issue.number }}
-          REPO=${{ github.repository }}
-          PROJECT_ID="16"  # Replace with your actual project ID
-          COLUMN_ID_IN_PROGRESS="2"  # Replace with 'In Progress' column ID
+      - name: Move issue to 'In Progress' if conditions met
+        if: steps.check_issue.outputs.moveIssue == 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const projectNumber = 16; // Replace with your project number
+            const repoName = context.repo.repo;
+            const owner = context.repo.owner;
+            const issueNumber = context.payload.issue.number;
 
-          # Check if the issue has an assignee or label
-          if [[ "${{ github.event.issue.assignee }}" != "null" || "${{ github.event.label }}" != "null" ]]; then
-            # Get the project card ID for the issue
-            CARD_ID=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-              "https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER/projects" | jq -r ".[0].id")
+            // Find the project's columns
+            const projects = await github.projects.listForRepo({
+              owner: owner,
+              repo: repoName
+            });
+            const projectId = projects.data.find(proj => proj.number === projectNumber).id;
 
-            # Move the card to 'In Progress' column
-            curl -X POST \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/projects/columns/$COLUMN_ID_IN_PROGRESS/cards" \
-              -d "{\"card_id\": $CARD_ID}"
+            const columns = await github.projects.listColumns({
+              project_id: projectId
+            });
 
-            echo "Issue #$ISSUE_NUMBER moved to 'In Progress'."
-          else
-            echo "No assignee or label; no action taken."
-          fi
+            // Find 'To Do' and 'In Progress' columns
+            const toDoColumn = columns.data.find(col => col.name === 'To Do');
+            const inProgressColumn = columns.data.find(col => col.name === 'In Progress');
+
+            // Find issue card in 'To Do' column
+            const card = await github.projects.listCards({
+              column_id: toDoColumn.id
+            }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
+
+            // Move the issue card to 'In Progress' column
+            if (card) {
+              await github.projects.moveCard({
+                card_id: card.id,
+                column_id: inProgressColumn.id,
+                position: 'top'
+              });
+            }
