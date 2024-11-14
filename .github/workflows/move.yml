@@ -15,7 +15,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const requiredLabel = 'In Progress'; // Replace with the exact label you want
+            const requiredLabel = 'your-label-name'; // Replace with the exact label you want
             const issueLabels = context.payload.issue.labels.map(label => label.name);
             const isAssigned = context.payload.issue.assignee !== null;
             const hasLabel = issueLabels.includes(requiredLabel);
@@ -27,7 +27,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const projectNumber = 16; // Replace with your project number
+            const projectNumber = PROJECT_NUMBER; // Replace with your project number
             const repoName = context.repo.repo;
             const owner = context.repo.owner;
             const issueNumber = context.payload.issue.number;
@@ -43,13 +43,13 @@ jobs:
               project_id: projectId
             });
 
-            // Find 'To Do' and 'In Progress' columns
-            const toDoColumn = columns.data.find(col => col.name === 'To Do');
+            // Find 'Backlogs' and 'In Progress' columns
+            const backlogsColumn = columns.data.find(col => col.name === 'Backlogs');
             const inProgressColumn = columns.data.find(col => col.name === 'In Progress');
 
-            // Find issue card in 'To Do' column
+            // Find issue card in 'Backlogs' column
             const card = await github.projects.listCards({
-              column_id: toDoColumn.id
+              column_id: backlogsColumn.id
             }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
 
             // Move the issue card to 'In Progress' column
