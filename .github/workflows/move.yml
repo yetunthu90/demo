@@ -6,7 +6,7 @@ on:
 
 permissions:
   issues: write
-  project: write
+  contents: write # <-- Corrected permission
 
 jobs:
   move_issue:
