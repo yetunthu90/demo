@@ -6,7 +6,8 @@ on:
 
 permissions:
   issues: write
-  contents: write 
+  contents: write
+  projects: read  # Ensure that you have the right permissions to access GitHub Projects
 
 jobs:
   move_issue:
@@ -22,49 +23,76 @@ jobs:
             const isAssigned = context.payload.issue.assignee !== null;
             console.log("Is assigned:", isAssigned);
             return { moveIssue: isAssigned };
+
       - name: Move issue to 'In Progress' if assigned
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const projectName = 'Your Project Name';  // <-- Replace with your project name
+            const projectName = 'Python Code';  // <-- Replace with your actual project name
             const repoName = context.repo.repo;
             const owner = context.repo.owner;
             const issueNumber = context.payload.issue.number;
             console.log("Retrieving projects for repository:", owner, "/", repoName);
-            const projects = await github.projects.listForRepo({
+
+            // Ensure that the GitHub API client is correctly initialized
+            const githubApi = github.rest;
+
+            // Fetch projects for the repository
+            const projects = await githubApi.projects.listForRepo({
               owner: owner,
               repo: repoName
             });
-            const project = projects.data.find(proj => proj.name === projectName);  // Match project by name
+
+            // Check if projects were returned
+            if (!projects || projects.data.length === 0) {
+              console.log("No projects found.");
+              return;
+            }
+
+            // Find the project by name
+            const project = projects.data.find(proj => proj.name === projectName);
             if (!project) {
               console.log("Project not found.");
               return;
             }
+
             const projectId = project.id;
             console.log("Project ID:", projectId);
             console.log("Listing columns for project ID:", projectId);
-            const columns = await github.projects.listColumns({
+
+            // Fetch columns for the project
+            const columns = await githubApi.projects.listColumns({
               project_id: projectId
             });
+
+            // Find the necessary columns
             const backlogsColumn = columns.data.find(col => col.name === 'Backlogs');
             const inProgressColumn = columns.data.find(col => col.name === 'In Progress');
+
             if (!backlogsColumn || !inProgressColumn) {
               console.log("Backlogs or In Progress column not found.");
               return;
             }
+
             console.log("Backlogs Column ID:", backlogsColumn.id, "In Progress Column ID:", inProgressColumn.id);
             console.log("Searching for issue card in Backlogs column.");
-            const card = await github.projects.listCards({
+
+            // Find the issue card in the 'Backlogs' column
+            const card = await githubApi.projects.listCards({
               column_id: backlogsColumn.id
             }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
+
             if (card) {
               console.log("Card found:", card.id);
-              await github.projects.moveCard({
+
+              // Move the card to the 'In Progress' column
+              await githubApi.projects.moveCard({
                 card_id: card.id,
                 column_id: inProgressColumn.id,
                 position: 'top'
               });
+
               console.log("Card moved to In Progress.");
             } else {
               console.log("Card not found in Backlogs column.");
