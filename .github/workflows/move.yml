@@ -17,8 +17,8 @@ jobs:
         run: |
           ISSUE_NUMBER=${{ github.event.issue.number }}
           REPO=${{ github.repository }}
-          PROJECT_ID="<YOUR_PROJECT_ID>"  # Replace with your actual project ID
-          COLUMN_ID_IN_PROGRESS="<COLUMN_ID_IN_PROGRESS>"  # Replace with 'In Progress' column ID
+          PROJECT_ID="16"  # Replace with your actual project ID
+          COLUMN_ID_IN_PROGRESS="2"  # Replace with 'In Progress' column ID
 
           # Check if the issue has an assignee or label
           if [[ "${{ github.event.issue.assignee }}" != "null" || "${{ github.event.label }}" != "null" ]]; then
