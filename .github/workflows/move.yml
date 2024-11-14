@@ -24,41 +24,50 @@ jobs:
             return { moveIssue: isAssigned };
 
       - name: Move issue to 'In Progress' if assigned
+        if: steps.check_issue.outputs.moveIssue == 'true'
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const projectNumber = 16; // Your project number here
+            const projectNumber = 16; // Replace with your actual project number
             const repoName = context.repo.repo;
             const owner = context.repo.owner;
             const issueNumber = context.payload.issue.number;
+
             console.log("Retrieving projects for repository:", owner, "/", repoName);
             const projects = await github.projects.listForRepo({
               owner: owner,
               repo: repoName
             });
+
             const project = projects.data.find(proj => proj.number === projectNumber);
             if (!project) {
               console.log("Project not found.");
               return;
             }
+
             const projectId = project.id;
             console.log("Project ID:", projectId);
+
             console.log("Listing columns for project ID:", projectId);
             const columns = await github.projects.listColumns({
               project_id: projectId
             });
+
             const backlogsColumn = columns.data.find(col => col.name === 'Backlogs');
             const inProgressColumn = columns.data.find(col => col.name === 'In Progress');
             if (!backlogsColumn || !inProgressColumn) {
               console.log("Backlogs or In Progress column not found.");
               return;
             }
+
             console.log("Backlogs Column ID:", backlogsColumn.id, "In Progress Column ID:", inProgressColumn.id);
+
             console.log("Searching for issue card in Backlogs column.");
             const card = await github.projects.listCards({
               column_id: backlogsColumn.id
             }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
+
             if (card) {
               console.log("Card found:", card.id);
               await github.projects.moveCard({
@@ -66,11 +75,6 @@ jobs:
                 column_id: inProgressColumn.id,
                 position: 'top'
               });
-              console.log("Card moved to In Progress.");
-            } else {
-              console.log("Card not found in Backlogs column.");
-            }
-
               console.log("Card moved to In Progress.");
             } else {
               console.log("Card not found in Backlogs column.");
