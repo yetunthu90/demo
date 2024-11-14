@@ -6,7 +6,7 @@ on:
 
 permissions:
   issues: write
-  contents: write 
+  contents: write
 
 jobs:
   move_issue:
@@ -28,6 +28,11 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const { Octokit } = require("@octokit/rest");
+            const octokit = new Octokit({
+              auth: '${{ secrets.GITHUB_TOKEN }}'
+            });
+
             const projectName = 'demo';  // <-- Replace with your project name
             const repoName = context.repo.repo;
             const owner = context.repo.owner;
@@ -35,28 +40,29 @@ jobs:
             console.log("Retrieving projects for repository:", owner, "/", repoName);
 
             try {
-              // List projects in the repository using the provided 'github' object (which is already initialized)
-              const projects = await github.projects.listForRepo({
+              // List projects in the repository using Octokit client
+              const { data: projects } = await octokit.projects.listForRepo({
                 owner: owner,
                 repo: repoName
               });
 
-              const project = projects.data.find(proj => proj.name === projectName);  // Match project by name
+              const project = projects.find(proj => proj.name === projectName);  // Match project by name
               if (!project) {
                 console.log("Project not found.");
                 return;
               }
+
               const projectId = project.id;
               console.log("Project ID:", projectId);
               console.log("Listing columns for project ID:", projectId);
 
               // List columns of the found project
-              const columns = await github.projects.listColumns({
+              const { data: columns } = await octokit.projects.listColumns({
                 project_id: projectId
               });
 
-              const backlogsColumn = columns.data.find(col => col.name === 'Backlogs');
-              const inProgressColumn = columns.data.find(col => col.name === 'In Progress');
+              const backlogsColumn = columns.find(col => col.name === 'Backlogs');
+              const inProgressColumn = columns.find(col => col.name === 'In Progress');
               if (!backlogsColumn || !inProgressColumn) {
                 console.log("Backlogs or In Progress column not found.");
                 return;
@@ -66,14 +72,15 @@ jobs:
               console.log("Searching for issue card in Backlogs column.");
 
               // Search for the issue card in the 'Backlogs' column
-              const card = await github.projects.listCards({
+              const { data: cards } = await octokit.projects.listCards({
                 column_id: backlogsColumn.id
-              }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
+              });
+              const card = cards.find(card => card.content_url.endsWith(issueNumber.toString()));
 
               if (card) {
                 console.log("Card found:", card.id);
                 // Move the card to the 'In Progress' column
-                await github.projects.moveCard({
+                await octokit.projects.moveCard({
                   card_id: card.id,
                   column_id: inProgressColumn.id,
                   position: 'top'
