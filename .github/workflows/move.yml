@@ -22,7 +22,7 @@ jobs:
             const isAssigned = context.payload.issue.assignee !== null;
             console.log("Is assigned:", isAssigned);
             return { moveIssue: isAssigned };
-
+            
       - name: Move issue to 'In Progress' if assigned
         if: steps.check_issue.outputs.moveIssue == 'true'
         uses: actions/github-script@v6
