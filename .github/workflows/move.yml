@@ -34,7 +34,7 @@ jobs:
             const owner = context.repo.owner;
             const issueNumber = context.payload.issue.number;
 
-            console.log("Retrieving projects for repository:", owner, "/", repoName);
+            console.log("Attempting to retrieve projects for repository:", owner, "/", repoName);
             const projects = await github.rest.projects.listForRepo({
               owner: owner,
               repo: repoName
@@ -42,12 +42,12 @@ jobs:
 
             const project = projects.data.find(proj => proj.number === projectNumber);
             if (!project) {
-              console.log("Project not found.");
+              console.log("Project not found with project number:", projectNumber);
               return;
             }
 
             const projectId = project.id;
-            console.log("Project ID:", projectId);
+            console.log("Project ID found:", projectId);
 
             console.log("Listing columns for project ID:", projectId);
             const columns = await github.rest.projects.listColumns({
@@ -56,26 +56,32 @@ jobs:
 
             const backlogsColumn = columns.data.find(col => col.name === 'Backlogs');
             const inProgressColumn = columns.data.find(col => col.name === 'In Progress');
+            if (!backlogsColumn) {
+              console.log("Backlogs column not found.");
+            }
+            if (!inProgressColumn) {
+              console.log("In Progress column not found.");
+            }
             if (!backlogsColumn || !inProgressColumn) {
-              console.log("Backlogs or In Progress column not found.");
               return;
             }
 
             console.log("Backlogs Column ID:", backlogsColumn.id, "In Progress Column ID:", inProgressColumn.id);
 
             console.log("Searching for issue card in Backlogs column.");
-            const card = await github.rest.projects.listCards({
+            const cards = await github.rest.projects.listCards({
               column_id: backlogsColumn.id
-            }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
+            });
 
+            const card = cards.data.find(card => card.content_url.endsWith(issueNumber.toString()));
             if (card) {
-              console.log("Card found:", card.id);
+              console.log("Card found with ID:", card.id);
               await github.rest.projects.moveCard({
                 card_id: card.id,
                 column_id: inProgressColumn.id,
                 position: 'top'
               });
-              console.log("Card moved to In Progress.");
+              console.log("Card successfully moved to In Progress.");
             } else {
-              console.log("Card not found in Backlogs column.");
+              console.log("Card not found in Backlogs column for issue:", issueNumber);
             }
