@@ -1,0 +1,39 @@
+name: Move Issues to In Progress
+
+on:
+  issues:
+    types: [labeled, assigned]
+
+jobs:
+  move_issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Move issue to In Progress if labeled or assigned
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          REPO=${{ github.repository }}
+          PROJECT_ID="<YOUR_PROJECT_ID>"  # Replace with your actual project ID
+          COLUMN_ID_IN_PROGRESS="<COLUMN_ID_IN_PROGRESS>"  # Replace with 'In Progress' column ID
+
+          # Check if the issue has an assignee or label
+          if [[ "${{ github.event.issue.assignee }}" != "null" || "${{ github.event.label }}" != "null" ]]; then
+            # Get the project card ID for the issue
+            CARD_ID=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+              "https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER/projects" | jq -r ".[0].id")
+
+            # Move the card to 'In Progress' column
+            curl -X POST \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/projects/columns/$COLUMN_ID_IN_PROGRESS/cards" \
+              -d "{\"card_id\": $CARD_ID}"
+
+            echo "Issue #$ISSUE_NUMBER moved to 'In Progress'."
+          else
+            echo "No assignee or label; no action taken."
+          fi
