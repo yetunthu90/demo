@@ -28,9 +28,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { Octokit } = require('@octokit/rest');  // Explicitly import the GitHub API client
-            const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-            
             const projectName = 'demo';  // <-- Replace with your project name
             const repoName = context.repo.repo;
             const owner = context.repo.owner;
@@ -38,8 +35,8 @@ jobs:
             console.log("Retrieving projects for repository:", owner, "/", repoName);
 
             try {
-              // List projects in the repository using octokit
-              const projects = await octokit.rest.projects.listForRepo({
+              // List projects in the repository using the provided 'github' object (which is already initialized)
+              const projects = await github.projects.listForRepo({
                 owner: owner,
                 repo: repoName
               });
@@ -54,7 +51,7 @@ jobs:
               console.log("Listing columns for project ID:", projectId);
 
               // List columns of the found project
-              const columns = await octokit.rest.projects.listColumns({
+              const columns = await github.projects.listColumns({
                 project_id: projectId
               });
 
@@ -69,14 +66,14 @@ jobs:
               console.log("Searching for issue card in Backlogs column.");
 
               // Search for the issue card in the 'Backlogs' column
-              const card = await octokit.rest.projects.listCards({
+              const card = await github.projects.listCards({
                 column_id: backlogsColumn.id
               }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
 
               if (card) {
                 console.log("Card found:", card.id);
                 // Move the card to the 'In Progress' column
-                await octokit.rest.projects.moveCard({
+                await github.projects.moveCard({
                   card_id: card.id,
                   column_id: inProgressColumn.id,
                   position: 'top'
