@@ -6,7 +6,7 @@ on:
 
 permissions:
   issues: write
-  contents: write # <-- Corrected permission
+  contents: write 
 
 jobs:
   move_issue:
@@ -34,20 +34,32 @@ jobs:
             const owner = context.repo.owner;
             const issueNumber = context.payload.issue.number;
 
+            console.log("Retrieving projects for repository:", owner, "/", repoName);
             const projects = await github.projects.listForRepo({
               owner: owner,
               repo: repoName
             });
-            const projectId = projects.data.find(proj => proj.number === projectNumber).id;
+            const project = projects.data.find(proj => proj.number === projectNumber);
+            if (!project) {
+              console.log("Project not found.");
+              return;
+            }
+            const projectId = project.id;
             console.log("Project ID:", projectId);
 
+            console.log("Listing columns for project ID:", projectId);
             const columns = await github.projects.listColumns({
               project_id: projectId
             });
-            const backlogsColumn = columns.data.find(col => col.name === 'Backlogs'); // <-- Ensure 'Backlogs' matches your column name
-            const inProgressColumn = columns.data.find(col => col.name === 'In Progress'); // <-- Ensure 'In Progress' matches your column name
+            const backlogsColumn = columns.data.find(col => col.name === 'Backlogs');
+            const inProgressColumn = columns.data.find(col => col.name === 'In Progress');
+            if (!backlogsColumn || !inProgressColumn) {
+              console.log("Backlogs or In Progress column not found.");
+              return;
+            }
             console.log("Backlogs Column ID:", backlogsColumn.id, "In Progress Column ID:", inProgressColumn.id);
 
+            console.log("Searching for issue card in Backlogs column.");
             const card = await github.projects.listCards({
               column_id: backlogsColumn.id
             }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
