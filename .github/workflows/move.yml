@@ -33,8 +33,12 @@ jobs:
             const owner = context.repo.owner;
             const issueNumber = context.payload.issue.number;
 
+            // Import required methods
+            const { listForRepo } = require("@octokit/rest").projects;
+            const { listColumns, listCards, moveCard } = require("@octokit/rest").projects;
+
             console.log("Retrieving projects for repository:", owner, "/", repoName);
-            const projects = await github.projects.listForRepo({
+            const projects = await listForRepo({
               owner: owner,
               repo: repoName
             });
@@ -49,7 +53,7 @@ jobs:
             console.log("Project ID:", projectId);
 
             console.log("Listing columns for project ID:", projectId);
-            const columns = await github.projects.listColumns({
+            const columns = await listColumns({
               project_id: projectId
             });
 
@@ -63,13 +67,13 @@ jobs:
             console.log("Backlogs Column ID:", backlogsColumn.id, "In Progress Column ID:", inProgressColumn.id);
 
             console.log("Searching for issue card in Backlogs column.");
-            const card = await github.projects.listCards({
+            const card = await listCards({
               column_id: backlogsColumn.id
             }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
 
             if (card) {
               console.log("Card found:", card.id);
-              await github.projects.moveCard({
+              await moveCard({
                 card_id: card.id,
                 column_id: inProgressColumn.id,
                 position: 'top'
