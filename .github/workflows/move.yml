@@ -4,59 +4,62 @@ on:
   issues:
     types: [labeled, assigned]
 
+permissions:
+  issues: write
+  project: write
+
 jobs:
   move_issue:
     runs-on: ubuntu-latest
     if: github.event.issue.pull_request == null
     steps:
-      - name: Check if issue has required label and is assigned
+      - name: Check if issue is assigned
         id: check_issue
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const requiredLabel = 'your-label-name'; // Replace with the exact label you want
-            const issueLabels = context.payload.issue.labels.map(label => label.name);
             const isAssigned = context.payload.issue.assignee !== null;
-            const hasLabel = issueLabels.includes(requiredLabel);
-            return { moveIssue: isAssigned && hasLabel };
+            console.log("Is assigned:", isAssigned);
+            return { moveIssue: isAssigned };
 
-      - name: Move issue to 'In Progress' if conditions met
+      - name: Move issue to 'In Progress' if assigned
         if: steps.check_issue.outputs.moveIssue == 'true'
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const projectNumber = PROJECT_NUMBER; // Replace with your project number
+            const projectNumber = 16; // <-- Replace PROJECT_NUMBER with your project number
             const repoName = context.repo.repo;
             const owner = context.repo.owner;
             const issueNumber = context.payload.issue.number;
 
-            // Find the project's columns
             const projects = await github.projects.listForRepo({
               owner: owner,
               repo: repoName
             });
             const projectId = projects.data.find(proj => proj.number === projectNumber).id;
+            console.log("Project ID:", projectId);
 
             const columns = await github.projects.listColumns({
               project_id: projectId
             });
+            const backlogsColumn = columns.data.find(col => col.name === 'Backlogs'); // <-- Ensure 'Backlogs' matches your column name
+            const inProgressColumn = columns.data.find(col => col.name === 'In Progress'); // <-- Ensure 'In Progress' matches your column name
+            console.log("Backlogs Column ID:", backlogsColumn.id, "In Progress Column ID:", inProgressColumn.id);
 
-            // Find 'Backlogs' and 'In Progress' columns
-            const backlogsColumn = columns.data.find(col => col.name === 'Backlogs');
-            const inProgressColumn = columns.data.find(col => col.name === 'In Progress');
-
-            // Find issue card in 'Backlogs' column
             const card = await github.projects.listCards({
               column_id: backlogsColumn.id
             }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
 
-            // Move the issue card to 'In Progress' column
             if (card) {
+              console.log("Card found:", card.id);
               await github.projects.moveCard({
                 card_id: card.id,
                 column_id: inProgressColumn.id,
                 position: 'top'
               });
+              console.log("Card moved to In Progress.");
+            } else {
+              console.log("Card not found in Backlogs column.");
             }
