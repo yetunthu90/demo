@@ -1,99 +1,23 @@
-name: Move Issue to In Progress
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
 
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning.
+
+name: Move assigned card
 on:
   issues:
-    types: [labeled, assigned]
-
-permissions:
-  issues: write
-  contents: write
-  projects: read  # Ensure that you have the right permissions to access GitHub Projects
-
+    types:
+      - assigned
 jobs:
-  move_issue:
+  move-assigned-card:
     runs-on: ubuntu-latest
-    if: github.event.issue.pull_request == null
     steps:
-      - name: Check if issue is assigned
-        id: check_issue
-        uses: actions/github-script@v6
+      - uses: alex-page/github-project-automation-plus@7ffb872c64bd809d23563a130a0a97d01dfa8f43
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const isAssigned = context.payload.issue.assignee !== null;
-            console.log("Is assigned:", isAssigned);
-            return { moveIssue: isAssigned };
-
-      - name: Move issue to 'In Progress' if assigned
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const projectName = 'Python Code';  // <-- Replace with your actual project name
-            const repoName = context.repo.repo;
-            const owner = context.repo.owner;
-            const issueNumber = context.payload.issue.number;
-            console.log("Retrieving projects for repository:", owner, "/", repoName);
-
-            // Ensure that the GitHub API client is correctly initialized
-            const githubApi = github.rest;
-
-            // Fetch projects for the repository
-            const projects = await githubApi.projects.listForRepo({
-              owner: owner,
-              repo: repoName
-            });
-
-            // Check if projects were returned
-            if (!projects || projects.data.length === 0) {
-              console.log("No projects found.");
-              return;
-            }
-
-            // Find the project by name
-            const project = projects.data.find(proj => proj.name === projectName);
-            if (!project) {
-              console.log("Project not found.");
-              return;
-            }
-
-            const projectId = project.id;
-            console.log("Project ID:", projectId);
-            console.log("Listing columns for project ID:", projectId);
-
-            // Fetch columns for the project
-            const columns = await githubApi.projects.listColumns({
-              project_id: projectId
-            });
-
-            // Find the necessary columns
-            const backlogsColumn = columns.data.find(col => col.name === 'Backlogs');
-            const inProgressColumn = columns.data.find(col => col.name === 'In Progress');
-
-            if (!backlogsColumn || !inProgressColumn) {
-              console.log("Backlogs or In Progress column not found.");
-              return;
-            }
-
-            console.log("Backlogs Column ID:", backlogsColumn.id, "In Progress Column ID:", inProgressColumn.id);
-            console.log("Searching for issue card in Backlogs column.");
-
-            // Find the issue card in the 'Backlogs' column
-            const card = await githubApi.projects.listCards({
-              column_id: backlogsColumn.id
-            }).then(cards => cards.data.find(card => card.content_url.endsWith(issueNumber.toString())));
-
-            if (card) {
-              console.log("Card found:", card.id);
-
-              // Move the card to the 'In Progress' column
-              await githubApi.projects.moveCard({
-                card_id: card.id,
-                column_id: inProgressColumn.id,
-                position: 'top'
-              });
-
-              console.log("Card moved to In Progress.");
-            } else {
-              console.log("Card not found in Backlogs column.");
-            }
+          project: demo
+          column: In Progress
+          repo-token: ${{ secrets.NewToken}}
