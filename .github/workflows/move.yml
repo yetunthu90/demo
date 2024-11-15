@@ -8,9 +8,14 @@ jobs:
   move-card:
     runs-on: ubuntu-latest
     steps:
-      - name: Move issue to "In Progress" column
-        uses: peter-evans/project-card@v2
-        with:
-          project: 'demo'
-          column: 'In Progress'
-          github_token: ${{ secrets.NewToken }}
+      - name: Move card to "In Progress"
+        run: |
+          ISSUE_URL="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/projects"
+          PROJECT_ID="16"
+          COLUMN_ID="278829"
+          
+          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -d "{\"project_id\": \"$PROJECT_ID\", \"column_id\": \"$COLUMN_ID\"}" \
+          $ISSUE_URL
+        env:
+          GITHUB_TOKEN: ${{ secrets.NewToken }}
