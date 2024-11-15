@@ -14,7 +14,7 @@ jobs:
           PROJECT_ID="16"
           COLUMN_ID="278829"
           
-          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          curl -X POST -H "Authorization: token ${{ secrets.NewToken }}" \
           -d "{\"project_id\": \"$PROJECT_ID\", \"column_id\": \"$COLUMN_ID\"}" \
           $ISSUE_URL
         env:
