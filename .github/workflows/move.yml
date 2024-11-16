@@ -1,6 +1,6 @@
 on:
   issues:
-    types: [assigned]
+    types: [labeled]
  
 jobs:
   automate-issues-labels:
