@@ -7,7 +7,8 @@ on:
 jobs:
   move-card:
     runs-on: ubuntu-latest
-    permissions:  write
+    permissions:
+      issues: write
     steps:
       - name: Move issue to "In Progress"
         run: |
