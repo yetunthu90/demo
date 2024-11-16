@@ -1,15 +1,16 @@
+name: automation for global projects
 on:
   issues:
-    types: [labeled]
- 
+    types:
+      - assigned
+
 jobs:
-  automate-issues-labels:
+  clear-inprogress-column:
     runs-on: ubuntu-latest
     steps:
-      - name: Move to In Progress
-        uses: bishalrai96/Project_Card_Automation@master
+      - uses: HiromiShikata/gh-actions-move-all-cards-on-projects@v1.0.2
         with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
-          label: "in progress"
-          column: "In Progress"
-          remove-label: "test, review, ready"
+          project_name: 202106
+          from_column_name: In progress
+          to_column_name: To do
+          github_token: ${{ secrets.GITHUB_TOKEN }}
