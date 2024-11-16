@@ -8,14 +8,16 @@ jobs:
   move-card:
     runs-on: ubuntu-latest
     steps:
-      - name: Move card to "In Progress"
+      - name: Move issue to "In Progress"
         run: |
-          ISSUE_URL="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/projects"
-          PROJECT_ID="16"
-          COLUMN_ID="47fc9ee4"
-          
+          ISSUE_URL="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}"
+          CONTENT_ID=$(curl -H "Authorization: token ${{ secrets.NewToken }}" -H "Accept: application/vnd.github+json" $ISSUE_URL | jq '.id')
+
+          COLUMN_URL="https://api.github.com/projects/columns/47fc9ee4/cards"
+
           curl -X POST -H "Authorization: token ${{ secrets.NewToken }}" \
-          -d "{\"project_id\": \"$PROJECT_ID\", \"column_id\": \"$COLUMN_ID\"}" \
-          $ISSUE_URL
+          -H "Accept: application/vnd.github+json" \
+          -d "{\"content_id\": \"$CONTENT_ID\", \"content_type\": \"Issue\"}" \
+          $COLUMN_URL
         env:
           GITHUB_TOKEN: ${{ secrets.NewToken }}
