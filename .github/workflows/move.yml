@@ -10,4 +10,6 @@ jobs:
         uses: bishalrai96/Project_Card_Automation@master
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          label: "in progress"
           column: "In Progress"
+          remove-label: "test, review, ready"
