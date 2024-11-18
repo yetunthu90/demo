@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Move to In Progress
-        uses: kin/gh-action-move-issue-to-column
+        uses: kin/gh-action-move-issue-to-column@v2
         with:
           access-token: ${{ secrets.GITHUB_TOKEN }}
           project-name: "demo"
