@@ -1,15 +1,20 @@
+name: Assigned Issues Are In Progress
+
 on:
   issues:
-    types: [labeled]
- 
+    types: [assigned]
+
 jobs:
-  automate-issues-labels:
+  move-to-in-progress:
     runs-on: ubuntu-latest
+    name: Move to In Progress Column
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Move to In Progress
-        uses: bishalrai96/Project_Card_Automation@master
+        uses: kin/gh-action-move-issue-to-column@1.0
         with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
-          label: "in progress"
-          column: "In Progress"
-          remove-label: "test, review, ready"
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+          project-name: "demo"
+          target-column: "In Progress"
