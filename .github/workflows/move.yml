@@ -17,4 +17,4 @@ jobs:
         with:
           access-token: ${{ secrets.GITHUB_TOKEN }}
           project-name: "demo"
-          target-column: "In Progress"
+          target-column: "Done"
